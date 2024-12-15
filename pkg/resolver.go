@@ -9,37 +9,36 @@ import (
 
 
 
-const (
-	root_ips = map[string]string{"a.root-servers.net": "198.41.0.4"}
-)
+var root_ips = map[string]string{"a.root-servers.net": "198.41.0.4"}
+
+//root IPs as resource record
+
 
 func Iterative_resolve(query string, resourceRecords []dns.RR) (dns.RR) {
 	for _, rr := range resourceRecords {
-		data := rr.String()[rr.Header().Rdlength:]
-
-		ans, err := send_query(data, query, false)
+		data := rr.String()[:rr.Header().Rdlength] //Rdlength is length of data after header
+		//rdata is just the IP record
+		dnsResponse, err := send_query(data, query, false) //will return the entire message
 		if err != nil {
 			continue // couldn't establish connection, go to the next server 
 		} 
-		if (len(ans.Answer) == 1) {
-			return ans.Answer[0]  //will return the entire rr
-		} else if (len(ans.Extra) >= 1) {
-			iterative_resolve(ans.Extra)  //returns a list of all the authority servers
+		if (len(dnsResponse.Answer) == 1) {
+			return dnsResponse.Answer[0]  //will return the entire rr
+		} else if (len(dnsResponse.Extra) >= 1) {
+			Iterative_resolve(query, dnsResponse.Extra)  //returns a list of all the authority servers' IP addresses
 		}
 	}
-		
-		//iterative => can receive either the answer or any type of response
-		
+	return nil //this is the case if we do not find an answer?
 }
 
-func Recursive_resolve(query string) []dns.RR {
-	ans, err := send_query("8.8.8.8", query, true)
+func Recursive_resolve(query string) (dns.RR) {
+	dnsResponse, err := send_query("8.8.8.8", query, true)
 	if err != nil {
 		fmt.Println(err.Error())
 		return nil
 	}
 
-	return ans
+	return dnsResponse.Answer[0]
 }
 
 //recursive:
@@ -47,7 +46,10 @@ func Recursive_resolve(query string) []dns.RR {
 //can only recieve the answer
 
 
-func send_query(server_ip_addr string, query string, recur bool) ([]dns.RR, error){
+//creates a new socket
+//sends a query to the ip address
+//receives on that new socket?
+func send_query(server_ip_addr string, query string, recur bool) (*dns.Msg, error){
 
 	conn, err := create_socket(server_ip_addr)
 	if err != nil {
@@ -60,18 +62,26 @@ func send_query(server_ip_addr string, query string, recur bool) ([]dns.RR, erro
 	msg.RecursionDesired = recur
 	
 	//receiving from the socket
-	var buf bytes.Buffer //dynamic buffer size
-    dnsPacket, err := conn.Read(buf)
+	buffer := make([]byte, 512)
+    n, err := conn.Read(buffer)
+
     if err != nil {
         fmt.Println("Error:", err)
-        return
+        return nil, err
     }
 
 	m := new(dns.Msg)
-	m.unpack(dnsPacket) 	
 
-	
-	return m.Answer
+	err = m.Unpack(buffer[:n]) 	
+    if err != nil {
+        fmt.Println("Error unpacking message:", err)
+        return nil, err
+    }
+
+	//return the whole message, not just the answer or ns section
+	return m, nil
+
+	//close socket once you get a response
 }
 //create socket each time you send a query
 //serialize into DNS packet
@@ -79,11 +89,7 @@ func send_query(server_ip_addr string, query string, recur bool) ([]dns.RR, erro
 
 // read msg from socket
 // store in cache? 
-
-// close the socket once we receive a response
-
-
-
+ 
 //if recursive = 8.8.8.8
 //if iterative = root_ips["a.root-servers.net"]
 func create_socket(server_ip string) (net.Conn, error) { //this will always be the root server
