@@ -9,16 +9,15 @@ import (
 
 
 
-var root_ips = map[string]string{"a.root-servers.net": "198.41.0.4"}
 
-//root IPs as resource record
+//how to do root IPs as resource record?
 
 
 func Iterative_resolve(query string, resourceRecords []dns.RR) (dns.RR) {
 	for _, rr := range resourceRecords {
 		data := rr.String()[:rr.Header().Rdlength] //Rdlength is length of data after header
 		//rdata is just the IP record
-		dnsResponse, err := send_query(data, query, false) //will return the entire message
+		dnsResponse, err := Send_query(data, query, false) //will return the entire message
 		if err != nil {
 			continue // couldn't establish connection, go to the next server 
 		} 
@@ -32,7 +31,7 @@ func Iterative_resolve(query string, resourceRecords []dns.RR) (dns.RR) {
 }
 
 func Recursive_resolve(query string) (dns.RR) {
-	dnsResponse, err := send_query("8.8.8.8", query, true)
+	dnsResponse, err := Send_query("8.8.8.8", query, true)
 	if err != nil {
 		fmt.Println(err.Error())
 		return nil
@@ -49,7 +48,7 @@ func Recursive_resolve(query string) (dns.RR) {
 //creates a new socket
 //sends a query to the ip address
 //receives on that new socket?
-func send_query(server_ip_addr string, query string, recur bool) (*dns.Msg, error){
+func Send_query(server_ip_addr string, query string, recur bool) (*dns.Msg, error){
 
 	conn, err := create_socket(server_ip_addr)
 	if err != nil {
@@ -81,7 +80,7 @@ func send_query(server_ip_addr string, query string, recur bool) (*dns.Msg, erro
 	//return the whole message, not just the answer or ns section
 	return m, nil
 
-	//close socket once you get a response
+	// TODO: close socket once you get a response
 }
 //create socket each time you send a query
 //serialize into DNS packet

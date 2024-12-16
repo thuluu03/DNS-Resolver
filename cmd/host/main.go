@@ -13,6 +13,8 @@ import (
 reads in repl input
 */
 
+var root_ips = map[string]string{"a.root-servers.net": "198.41.0.4"}
+
 func main() {
 	log.SetOutput(os.Stdout)
 
@@ -42,14 +44,32 @@ func main() {
 		}
 
 		recur := string(parsed_inputs[1][1:]) // should return t or f
-		domain_name := string(parsed_inputs[2])
+		query := string(parsed_inputs[2])
 
 		if recur == "t" {
-			ans := resolver.Recursive_resolve(domain_name)
+			ans := resolver.Recursive_resolve(query)
 			print(ans)
 		} else if recur == "f" {
-			ans := resolver.Iterative_resolve(domain_name)
-			print(ans)
+
+			//send initial query to root server
+			firstResponse, err := resolver.Send_query(root_ips["a.root-servers.net"], query, false)
+
+			if err != nil {
+				fmt.Println("Error in asknig root: ", err)
+				return
+			}
+
+			//call Iterative resolve on the first response...
+			if (len(firstResponse.Answer) == 1) {
+				ans := firstResponse.Answer[0]  //if root server immediately returns answer
+				print(ans)
+			} else if (len(firstResponse.Extra) >= 1) { //otherwise, need to call the iterative resolver on the first set of responses
+				ans := resolver.Iterative_resolve(query, firstResponse.Extra)
+				print(ans)
+			}
+
+			
+			
 		}
 
 	}
