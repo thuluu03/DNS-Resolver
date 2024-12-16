@@ -16,6 +16,8 @@ import (
 func Iterative_resolve(query string, resourceRecords []dns.RR) (dns.RR) {
 	for _, rr := range resourceRecords {
 		data := rr.String()[:rr.Header().Rdlength] //Rdlength is length of data after header
+		//is this the best way to extract the ip address?
+		
 		//rdata is just the IP record
 		dnsResponse, err := Send_query(data, query, false) //will return the entire message
 		if err != nil {
@@ -24,14 +26,17 @@ func Iterative_resolve(query string, resourceRecords []dns.RR) (dns.RR) {
 		if (len(dnsResponse.Answer) == 1) {
 			return dnsResponse.Answer[0]  //will return the entire rr
 		} else if (len(dnsResponse.Extra) >= 1) {
-			Iterative_resolve(query, dnsResponse.Extra)  //returns a list of all the authority servers' IP addresses
+			return Iterative_resolve(query, dnsResponse.Extra)  //returns a list of all the authority servers' IP addresses
+		} else {
+			//return
+			return nil
 		}
 	}
 	return nil //this is the case if we do not find an answer?
 }
 
 func Recursive_resolve(query string) (dns.RR) {
-	dnsResponse, err := Send_query("8.8.8.8", query, true)
+	dnsResponse, err := Send_query("8.8.8.8", query, true) //can instead make the IP custom
 	if err != nil {
 		fmt.Println(err.Error())
 		return nil
@@ -55,10 +60,27 @@ func Send_query(server_ip_addr string, query string, recur bool) (*dns.Msg, erro
 		return nil, err
 	}
 
+	defer conn.Close()
+
 	//serialize the query
 	msg := new(dns.Msg)
 	msg.SetQuestion(query, dns.TypeA)
 	msg.RecursionDesired = recur
+
+
+	msgBytes, err := msg.Pack()
+	if err != nil {
+		return nil, fmt.Errorf("failed to pack query: %w", err)
+	}
+
+	// Send the query to the server
+	_, err = conn.Write(msgBytes)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to write message bytes: %w", err)
+	}
+
+	//wait to recieve in this time
 	
 	//receiving from the socket
 	buffer := make([]byte, 512)
