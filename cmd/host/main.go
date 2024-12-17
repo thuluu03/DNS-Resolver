@@ -49,7 +49,13 @@ func main() {
 		if recur == "t" {
 			fmt.Println("performing recursive resolver")
 			ans := resolver.Recursive_resolve(query)
-			print(ans)
+
+			if ans != nil {
+				print(ans.String())
+			} else {
+				print("No answer found for this query")
+			}
+			
 		} else if recur == "f" {
 
 			//send initial query to root server

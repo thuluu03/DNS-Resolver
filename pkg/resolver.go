@@ -43,8 +43,14 @@ func Recursive_resolve(query string) (dns.RR) {
 		return nil
 	}
 
-	return dnsResponse.Answer[0]
-}
+	if len(dnsResponse.Answer) > 0 { //we have found an answer
+		fmt.Println("Answer found")
+		return dnsResponse.Answer[0]
+		// TODO: Should we return all possible answers?
+	} else { //no response
+		return nil
+	}
+ }
 
 //recursive:
 //let the DNS server query OTHER DNS servers
@@ -66,7 +72,6 @@ func Send_query(server_ip_addr string, query string, recur bool) (*dns.Msg, erro
 	//serialize the query
 	msg := new(dns.Msg)
 	msg.SetQuestion(dns.Fqdn(query), dns.TypeA)
-	log.Printf("your query: %s", query)
 	msg.RecursionDesired = recur
 
 
@@ -88,7 +93,6 @@ func Send_query(server_ip_addr string, query string, recur bool) (*dns.Msg, erro
 	buffer := make([]byte, 512)
 
     n, err := conn.Read(buffer)
-	log.Printf("bytes read: %d", n)
 
     if err != nil {
         fmt.Println("Error:", err)
@@ -102,9 +106,6 @@ func Send_query(server_ip_addr string, query string, recur bool) (*dns.Msg, erro
         fmt.Println("Error unpacking message:", err)
         return nil, err
     }
-
-	log.Printf("Message: %s", m.Answer[0].String())
-
 
 	//return the whole message, not just the answer or ns section
 	return m, nil
