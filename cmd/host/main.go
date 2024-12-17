@@ -43,10 +43,11 @@ func main() {
 			continue
 		}
 
-		recur := string(parsed_inputs[1][1:]) // should return t or f
-		query := string(parsed_inputs[2])
+		recur := string(parsed_inputs[0][2:]) // should return t or f
+		query := string(parsed_inputs[1])
 
 		if recur == "t" {
+			fmt.Println("performing recursive resolver")
 			ans := resolver.Recursive_resolve(query)
 			print(ans)
 		} else if recur == "f" {
@@ -55,7 +56,7 @@ func main() {
 			firstResponse, err := resolver.Send_query(root_ips["a.root-servers.net"], query, false)
 
 			if err != nil {
-				fmt.Println("Error in asknig root: ", err)
+				fmt.Println("Error in asking root: ", err)
 				return
 			}
 

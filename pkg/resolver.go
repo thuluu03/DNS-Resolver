@@ -3,6 +3,7 @@ package pkg
 import (
 	"net" 
 	"fmt"
+	"log"
 	dns "github.com/miekg/dns" 
 )
 
@@ -64,7 +65,8 @@ func Send_query(server_ip_addr string, query string, recur bool) (*dns.Msg, erro
 
 	//serialize the query
 	msg := new(dns.Msg)
-	msg.SetQuestion(query, dns.TypeA)
+	msg.SetQuestion(dns.Fqdn(query), dns.TypeA)
+	log.Printf("your query: %s", query)
 	msg.RecursionDesired = recur
 
 
@@ -84,7 +86,9 @@ func Send_query(server_ip_addr string, query string, recur bool) (*dns.Msg, erro
 	
 	//receiving from the socket
 	buffer := make([]byte, 512)
+
     n, err := conn.Read(buffer)
+	log.Printf("bytes read: %d", n)
 
     if err != nil {
         fmt.Println("Error:", err)
@@ -98,6 +102,9 @@ func Send_query(server_ip_addr string, query string, recur bool) (*dns.Msg, erro
         fmt.Println("Error unpacking message:", err)
         return nil, err
     }
+
+	log.Printf("Message: %s", m.Answer[0].String())
+
 
 	//return the whole message, not just the answer or ns section
 	return m, nil
@@ -114,7 +121,10 @@ func Send_query(server_ip_addr string, query string, recur bool) (*dns.Msg, erro
 //if recursive = 8.8.8.8
 //if iterative = root_ips["a.root-servers.net"]
 func create_socket(server_ip string) (net.Conn, error) { //this will always be the root server
-	conn, err := net.Dial("udp4", server_ip)
+	conn, err := net.Dial("udp4", server_ip + ":53")
+	//53 is default port?
+
+	//missing port in address
     if err != nil {
         fmt.Println("Error:", err)
         return nil, err
