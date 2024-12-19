@@ -33,17 +33,23 @@ func main() {
 	}()
 
 	for {
+		fmt.Println("> awaiting query")
 		fmt.Print("> ")
 		input := <-keyboardChan
+
+		if (input == "quit") {
+			return
+		}
 
 		parsed_inputs := strings.Split(input, " ")
 
 		if len(parsed_inputs) != 2 {
-			fmt.Println("-[r] [domain-name] \n \t r=t or r=f")
+			fmt.Println("-[r][domain-name] \n \t r=t or r=f")
 			continue
 		}
 
-		recur := string(parsed_inputs[0][2:]) // should return t or f
+		recur := string(parsed_inputs[0][1:]) // should return t or f
+
 		query := string(parsed_inputs[1])
 
 		if recur == "t" {
@@ -51,9 +57,9 @@ func main() {
 			ans := resolver.Recursive_resolve(query)
 
 			if ans != nil {
-				print("Found answer: ", ans.String())
+				fmt.Println(ans.String())
 			} else {
-				print("No answer found for this query")
+				fmt.Println("No answer found for this query")
 			}
 			
 		} else if recur == "f" {
@@ -62,8 +68,6 @@ func main() {
 
 			//send initial query to root server
 			firstResponse, err := resolver.Send_query(root_ips["a.root-servers.net"], query, false)
-			
-
 			if err != nil {
 				fmt.Println("Error in asking root: ", err)
 				return
@@ -71,18 +75,16 @@ func main() {
 
 			//call Iterative resolve on the first response...
 			if (len(firstResponse.Answer) >= 1) {
-				ans := firstResponse.Answer[0]  //if root server immediately returns answer
-				print("Found answer: ", ans.String())
+				ans := firstResponse  //if root server immediately returns answer
+				fmt.Println(ans.String())
 			} else if (len(firstResponse.Extra) >= 1) { //otherwise, need to call the iterative resolver on the first set of responses
-				ans := resolver.Iterative_resolve(query, firstResponse.Extra)
+				ans := resolver.Iterative_resolve(query, firstResponse)
 				if ans != nil {
-					print("Found answer: ", ans.String())
+					print(ans.String())
 				} else {
 					print("No answer found for this query")
 				}
 			}
-
-			
 			
 		}
 

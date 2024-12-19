@@ -1,3 +1,4 @@
 all:
+	go build ./cmd/host
 
-clean:
+	go run ./host

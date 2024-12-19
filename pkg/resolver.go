@@ -7,38 +7,41 @@ import (
 )
 
 
-func Iterative_resolve(query string, resourceRecords []dns.RR) (dns.RR) {
+func Iterative_resolve(query string, msg *dns.Msg) (*dns.Msg) {
+	resourceRecords := msg.Extra
+	// fmt.Println(msg.String())
+	// fmt.Println("first this in additional section: ", resourceRecords[0])
+
 	for _, rr := range resourceRecords {
-
-
 		//only consider A types
 
 		//if it is type A
 		if aRecord, ok := rr.(*dns.A); ok { //only do this for ipv4 addersses
 			data := aRecord.A.String()  //get the ip address
 		
-		
-		//rdata is just the IP record
-		dnsResponse, err := Send_query(data, query, false) //will return the entire message
-		if err != nil {
-			continue // couldn't establish connection, go to the next server 
-		} 
-		if (len(dnsResponse.Answer) >= 1) {
-			return dnsResponse.Answer[0]  //will return the entire rr
-		} else if (len(dnsResponse.Extra) >= 1) {
-			return Iterative_resolve(query, dnsResponse.Extra)  //returns a list of all the authority servers' IP addresses
-		} else {
-			//return
-			return nil
-		}
+			//rdata is just the IP record
+			dnsResponse, err := Send_query(data, query, false) //will return the entire message
+			if err != nil {
+				continue // couldn't establish connection, go to the next server 
+			} 
 
+			// fmt.Println("response: ", dnsResponse.String())
+			// fmt.Println("answer len: ", len(dnsResponse.Answer))
+
+			if (len(dnsResponse.Answer) >= 1) {
+				return dnsResponse  //will return the entire rr
+			} else if (len(dnsResponse.Extra) >= 1) {
+				return Iterative_resolve(query, dnsResponse)  //returns a list of all the authority servers' IP addresses
+			} else {
+				//return
+				return nil
+			}
 		}
-		 
 	}
 	return nil //this is the case if we do not find an answer?
 }
 
-func Recursive_resolve(query string) (dns.RR) {
+func Recursive_resolve(query string) (*dns.Msg) {
 	dnsResponse, err := Send_query("8.8.8.8", query, true) //can instead make the IP custom
 	if err != nil {
 		fmt.Println(err.Error())
@@ -46,8 +49,7 @@ func Recursive_resolve(query string) (dns.RR) {
 	}
 
 	if len(dnsResponse.Answer) > 0 { //we have found an answer
-		fmt.Println("Answer found")
-		return dnsResponse.Answer[0]
+		return dnsResponse
 		// TODO: Should we return all possible answers?
 	} else { //no response
 		return nil
@@ -93,7 +95,7 @@ func Send_query(server_ip_addr string, query string, recur bool) (*dns.Msg, erro
 	//wait to recieve in this time
 	
 	//receiving from the socket
-	buffer := make([]byte, 512)
+	buffer := make([]byte, 1024)
 
     n, err := conn.Read(buffer)
 
