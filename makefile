@@ -1,4 +1,3 @@
 all:
-	go build ./cmd/host
-
-	go run ./host
+	go run ./cmd/host/main.go
+	
